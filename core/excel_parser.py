@@ -28,20 +28,20 @@ def carregar_dados_excel(caminho_arquivo: str, colunas_para_ler: list = None) ->
                              engine='python', # 'python' é mais lento mas melhor na detecção de sep
                              encoding_errors='replace') # Lida com erros de encoding
         else:
-            print(f"Erro: Formato de arquivo não suportado: '{extensao}'")
+            # print(f"Erro: Formato de arquivo não suportado: '{extensao}'")
             return None
 
-        print(f"Arquivo '{os.path.basename(caminho_arquivo)}' lido com sucesso.")
+        # print(f"Arquivo '{os.path.basename(caminho_arquivo)}' lido com sucesso.")
         return df
 
     except FileNotFoundError:
-        print(f"Erro: O arquivo '{caminho_arquivo}' não foi encontrado.")
+        # print(f"Erro: O arquivo '{caminho_arquivo}' não foi encontrado.")
         return None
     except ValueError as ve: # Pode ser lançado por 'usecols' se a coluna não existir
-        print(f"Erro de Valor ao ler o arquivo '{caminho_arquivo}': {ve}")
+        # print(f"Erro de Valor ao ler o arquivo '{caminho_arquivo}': {ve}")
         return None
     except Exception as e:
-        print(f"Ocorreu um erro inesperado ao ler o arquivo '{caminho_arquivo}': {e}")
+        # print(f"Ocorreu um erro inesperado ao ler o arquivo '{caminho_arquivo}': {e}")
         return None
 
 if __name__ == '__main__':

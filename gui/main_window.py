@@ -280,6 +280,7 @@ class MainWindow(QMainWindow):
         action_buttons_layout.addStretch(1)
         main_layout.addLayout(action_buttons_layout)
 
+        self.set_ui_for_processing(False)
         self._atualizar_ui_modo()
 
     def _atualizar_ui_modo(self):
@@ -327,6 +328,11 @@ class MainWindow(QMainWindow):
         self.log_message(f"Arquivo {os.path.basename(caminho)} carregado com {len(cols)} colunas.")
     
     def _iniciar_confronto(self):
+        
+        if self.thread and self.thread.isRunning():
+            self.show_error_and_log("Uma operação já está em andamento")
+            return
+        
         self.console_output.clear()
         self.log_message("Iniciando validações...")
 
@@ -354,15 +360,18 @@ class MainWindow(QMainWindow):
 
         # Coletar filtros
         def get_filter_info(gb, combo_col, combo_op, edit_val):
+            # Lógica de filtro precisa do groupbox para verificar se está checado
             if not gb.isChecked(): return None
             col, op, val = combo_col.currentText(), combo_op.currentText(), edit_val.text().strip()
             if not col: self.show_error_and_log("Filtro ativado mas sem coluna selecionada."); return "INVALID"
-            if op not in ['é nulo', 'não é nulo'] and not val:
-                self.show_error_and_log("Filtro requer um valor para o operador selecionado."); return "INVALID"
+            if op not in ['é nulo', 'não é nulo'] and not val: self.show_error_and_log("Filtro requer um valor para o operador selecionado."); return "INVALID"
             return {'coluna': col, 'operador': op, 'valor': val}
 
-        filtro_a = get_filter_info(self.combo_coluna_filtro_a.parentWidget(), self.combo_coluna_filtro_a, self.combo_operador_filtro_a, self.edit_valor_filtro_a)
-        filtro_b = get_filter_info(self.combo_coluna_filtro_b.parentWidget(), self.combo_coluna_filtro_b, self.combo_operador_filtro_b, self.edit_valor_filtro_b)
+        # Passando o GroupBox (pai dos widgets de filtro) para a função
+        gb_filtro_a = self.combo_coluna_filtro_a.parentWidget()
+        gb_filtro_b = self.combo_coluna_filtro_b.parentWidget()
+        filtro_a = get_filter_info(gb_filtro_a, self.combo_coluna_filtro_a, self.combo_operador_filtro_a, self.edit_valor_filtro_a)
+        filtro_b = get_filter_info(gb_filtro_b, self.combo_coluna_filtro_b, self.combo_operador_filtro_b, self.edit_valor_filtro_b)
         if "INVALID" in [filtro_a, filtro_b]: return
 
         # Configuração e início da Thread
@@ -381,9 +390,21 @@ class MainWindow(QMainWindow):
         self.worker.finished.connect(self._on_confronto_finished)
         self.worker.error.connect(self._on_confronto_error)
         self.worker.progress.connect(self._on_progress_update)
-        self.thread.finished.connect(self.thread.deleteLater)
+        # BUGFIX: Limpa a referência ao worker/thread quando eles terminam
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.error.connect(self.thread.quit)
+        self.thread.finished.connect(self.clean_up_thread)
         self.thread.start()
-        self.log_message("Validações concluídas. Iniciando processamento em background...")
+        self.log_message("Validações concluídas. Iniciando processamento...")
+
+    def clean_up_thread(self):
+        """Zera as referências da thread e do worker para a próxima execução."""
+        self.log_message("Limpando recursos da operação anterior.")
+        self.worker.deleteLater()
+        self.thread.quit()
+        self.thread.wait() # Espera a thread terminar de fato
+        self.worker = None
+        self.thread = None
 
     def _on_confronto_finished(self, resultados):
         self.log_message("Processamento concluído. Solicitando local para salvar o relatório.")
@@ -397,6 +418,7 @@ class MainWindow(QMainWindow):
             if gerar_relatorio_excel(resultados, caminho_salvar):
                 QMessageBox.information(self, "Sucesso", f"Relatório gerado com sucesso!\n{caminho_salvar}")
                 self.log_message("Relatório gerado com sucesso!")
+                self.set_ui_for_processing(False)
             else:
                 self.show_error_and_log("Falha ao gerar o arquivo de relatório Excel.")
         else:
@@ -418,6 +440,7 @@ class MainWindow(QMainWindow):
             self.log_message("CANCELAMENTO SOLICITADO!", is_error=True)
             self.worker.request_cancel()
             self.btn_cancelar_operacao.setText("Cancelando...")
+            self.btn_cancelar_operacao.setEnabled(False)
 
     def set_ui_for_processing(self, is_processing):
         self.btn_iniciar_confronto.setEnabled(not is_processing)

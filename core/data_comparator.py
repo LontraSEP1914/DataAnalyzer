@@ -25,7 +25,7 @@ def _aplicar_filtro_df(df: pd.DataFrame, filtro_info: dict) -> pd.DataFrame:
     valor_filtro_str = filtro_info['valor']
 
     if coluna not in df.columns:
-        print(f"Aviso de Filtro: Coluna de filtro '{coluna}' não encontrada no DataFrame. Filtro não aplicado.")
+        # print(f"Aviso de Filtro: Coluna de filtro '{coluna}' não encontrada no DataFrame. Filtro não aplicado.")
         return df
 
     serie_coluna = df[coluna]
@@ -43,7 +43,7 @@ def _aplicar_filtro_df(df: pd.DataFrame, filtro_info: dict) -> pd.DataFrame:
         # Operadores que usam o campo 'valor'
         # Para estes, se o valor_filtro_str for essencial e estiver vazio, não aplicar.
         elif not valor_filtro_str.strip() and operador not in ['é nulo', 'não é nulo']:
-            print(f"Aviso de Filtro: Valor para o operador '{operador}' na coluna '{coluna}' está vazio. Filtro não aplicado.")
+            # print(f"Aviso de Filtro: Valor para o operador '{operador}' na coluna '{coluna}' está vazio. Filtro não aplicado.")
             return df # Retorna original se valor é necessário mas não fornecido
         
         elif operador in ['>', '<', '>=', '<=']:
@@ -81,17 +81,17 @@ def _aplicar_filtro_df(df: pd.DataFrame, filtro_info: dict) -> pd.DataFrame:
             mask = serie_coluna.astype(str).str.endswith(valor_filtro_str, na=False)
             df_filtrado = df[mask]
         else:
-            print(f"Aviso de Filtro: Operador '{operador}' desconhecido. Filtro não aplicado.")
+            # print(f"Aviso de Filtro: Operador '{operador}' desconhecido. Filtro não aplicado.")
             return df # Retorna original
 
-        print(f"Filtro aplicado: Coluna='{coluna}', Operador='{operador}', Valor='{valor_filtro_str}'. Linhas restantes: {len(df_filtrado)}")
+        # print(f"Filtro aplicado: Coluna='{coluna}', Operador='{operador}', Valor='{valor_filtro_str}'. Linhas restantes: {len(df_filtrado)}")
         return df_filtrado
 
     except ValueError: # Captura erro de conversão de valor_filtro_str para float/int
-        print(f"Aviso de Filtro: Valor '{valor_filtro_str}' inválido para operador numérico '{operador}' na coluna '{coluna}'. Filtro não aplicado.")
+        # print(f"Aviso de Filtro: Valor '{valor_filtro_str}' inválido para operador numérico '{operador}' na coluna '{coluna}'. Filtro não aplicado.")
         return df # Retorna original se o valor for inválido para o operador
     except Exception as e:
-        print(f"Erro inesperado ao aplicar filtro na coluna '{coluna}' com operador '{operador}': {e}")
+        # print(f"Erro inesperado ao aplicar filtro na coluna '{coluna}' com operador '{operador}': {e}")
         import traceback; traceback.print_exc()
         return df # Retorna original em caso de outro erro
 
@@ -118,7 +118,7 @@ def comparar_dataframes(df_lado_a: pd.DataFrame,
 
         renamed_cols_a_map = {}
         for col_orig_a in cols_a_originais_dos_pares:
-            # MODIFICADO: checar se a coluna está na LISTA de chaves
+            # checar se a coluna está na LISTA de chaves
             if col_orig_a in colunas_chave_a: 
                 renamed_cols_a_map[col_orig_a] = col_orig_a
                 continue
@@ -129,7 +129,7 @@ def comparar_dataframes(df_lado_a: pd.DataFrame,
             
         renamed_cols_b_map = {}
         for col_orig_b in cols_b_originais_dos_pares:
-            # MODIFICADO: checar se a coluna está na LISTA de chaves
+            # checar se a coluna está na LISTA de chaves
             if col_orig_b in colunas_chave_b: 
                 renamed_cols_b_map[col_orig_b] = col_orig_b
                 continue
@@ -149,7 +149,6 @@ def comparar_dataframes(df_lado_a: pd.DataFrame,
         )
         # -----------------------------------------------
 
-        # ... (O resto da função para calcular diferenças permanece exatamente o mesmo) ...
         if df_merged.empty:
              print(f"Aviso DataComparator: O merge (tipo '{tipo_join}') resultou em um DataFrame vazio.")
              return {'resumo_por_par': [], 'dataframe_merged': df_merged}
@@ -193,10 +192,10 @@ def comparar_dataframes(df_lado_a: pd.DataFrame,
         }
 
     except KeyError as ke:
-        print(f"Erro de Chave (KeyError) durante a comparação: {ke}.")
+        # print(f"Erro de Chave (KeyError) durante a comparação: {ke}.")
         return None
     except Exception as e:
-        print(f"Ocorreu um erro inesperado durante a comparação: {e}")
+        # print(f"Ocorreu um erro inesperado durante a comparação: {e}")
         import traceback; traceback.print_exc()
         return None
 

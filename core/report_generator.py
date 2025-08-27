@@ -115,75 +115,69 @@ def aplicar_estilos_planilha(writer, sheet_name, df_para_estilo):
 
 
 def gerar_relatorio_excel(dados_comparacao: dict, caminho_saida: str, nome_planilha_resumo: str = "Resumo_Comparacao", nome_planilha_detalhes: str = "Dados_Detalhados"):
-    if not dados_comparacao or 'resumo_por_par' not in dados_comparacao or 'dataframe_merged' not in dados_comparacao:
-        print("Erro: Dados de comparação ('resumo_por_par' ou 'dataframe_merged') ausentes.")
+    if not dados_comparacao or 'dataframe_merged' not in dados_comparacao:
+        # print("Erro: Dados de comparação ('dataframe_merged') ausentes.")
         return False
     try:
-        lista_resumo_original = dados_comparacao['resumo_por_par']
-        df_resumo_para_escrita = pd.DataFrame()
-        if not lista_resumo_original:
-            df_resumo_para_escrita = pd.DataFrame([{"Status": "Nenhum par de colunas mapeado ou comparável encontrado."}])
-        else:
-            lista_resumo_modificada = []
-            for item_resumo in lista_resumo_original:
-                item_copiado = item_resumo.copy()
-                if 'diferenca_percentual_total' in item_copiado and isinstance(item_copiado['diferenca_percentual_total'], (int, float)):
-                    # Tratar np.inf antes da divisão
-                    if item_copiado['diferenca_percentual_total'] == np.inf:
-                        item_copiado['diferenca_percentual_total'] = 'INF'
-                    elif item_copiado['diferenca_percentual_total'] == -np.inf:
-                        item_copiado['diferenca_percentual_total'] = '-INF'
-                    elif pd.notna(item_copiado['diferenca_percentual_total']):
-                        item_copiado['diferenca_percentual_total'] /= 100.0
-                lista_resumo_modificada.append(item_copiado)
-            
-            df_resumo_para_escrita = pd.DataFrame(lista_resumo_modificada)
-            df_resumo_para_escrita.rename(columns={
-                'par_comparado': 'Par Comparado', 'total_lado_a': 'Total Lado A',
-                'total_lado_b': 'Total Lado B', 'diferenca_absoluta_total': 'Diferença Absoluta Total',
-                'diferenca_percentual_total': 'Diferença Percentual Total (%)'
-            }, inplace=True)
-        
-        df_detalhes_original = dados_comparacao['dataframe_merged']
-        df_detalhes_para_escrita = df_detalhes_original.copy()
-
-        for col_name in df_detalhes_para_escrita.columns:
-            if col_name.endswith("_DiffPerc_Linha(%)"):
-                # A coluna já contém números (float) ou np.inf do data_comparator
-                # Vamos criar uma nova série para modificação
-                col_data = df_detalhes_para_escrita[col_name].copy()
-                
-                # Identificar onde estão os infinitos
-                is_inf = (col_data == np.inf)
-                is_neg_inf = (col_data == -np.inf)
-                is_finite = np.isfinite(col_data) # Onde não é inf nem NaN
-
-                # Dividir apenas os finitos por 100
-                col_data[is_finite] = col_data[is_finite] / 100.0
-                
-                # Se há infinitos ou se vamos misturar strings, converter para object
-                if is_inf.any() or is_neg_inf.any():
-                    col_data = col_data.astype(object) # Converte para object para aceitar strings
-                    col_data[is_inf] = 'INF'
-                    col_data[is_neg_inf] = '-INF'
-                
-                df_detalhes_para_escrita[col_name] = col_data
-
-
-        diretorio_saida = os.path.dirname(caminho_saida)
-        if diretorio_saida and not os.path.exists(diretorio_saida): os.makedirs(diretorio_saida)
-
         with pd.ExcelWriter(caminho_saida, engine='openpyxl') as writer:
-            df_resumo_para_escrita.to_excel(writer, sheet_name=nome_planilha_resumo, index=False)
-            aplicar_estilos_planilha(writer, nome_planilha_resumo, df_resumo_para_escrita) 
+            # Só cria a aba de resumo se houver dados para ela
+            if dados_comparacao.get('resumo_por_par'):
+                lista_resumo_original = dados_comparacao['resumo_por_par']
+                
+                # O código original para processar e salvar o resumo vem aqui dentro
+                df_resumo_para_escrita = pd.DataFrame()
+                if not lista_resumo_original:
+                    df_resumo_para_escrita = pd.DataFrame([{"Status": "Nenhum par de colunas mapeado ou comparável encontrado."}])
+                else:
+                    lista_resumo_modificada = []
+                    for item_resumo in lista_resumo_original:
+                        item_copiado = item_resumo.copy()
+                        if 'diferenca_percentual_total' in item_copiado and isinstance(item_copiado['diferenca_percentual_total'], (int, float)):
+                            if item_copiado['diferenca_percentual_total'] == np.inf:
+                                item_copiado['diferenca_percentual_total'] = 'INF'
+                            elif item_copiado['diferenca_percentual_total'] == -np.inf:
+                                item_copiado['diferenca_percentual_total'] = '-INF'
+                            elif pd.notna(item_copiado['diferenca_percentual_total']):
+                                item_copiado['diferenca_percentual_total'] /= 100.0
+                        lista_resumo_modificada.append(item_copiado)
+                    
+                    df_resumo_para_escrita = pd.DataFrame(lista_resumo_modificada)
+                    df_resumo_para_escrita.rename(columns={
+                        'par_comparado': 'Par Comparado', 'total_lado_a': 'Total Lado A',
+                        'total_lado_b': 'Total Lado B', 'diferenca_absoluta_total': 'Diferença Absoluta Total',
+                        'diferenca_percentual_total': 'Diferença Percentual Total (%)'
+                    }, inplace=True)
 
-            df_detalhes_para_escrita.to_excel(writer, sheet_name=nome_planilha_detalhes, index=False)
-            aplicar_estilos_planilha(writer, nome_planilha_detalhes, df_detalhes_para_escrita) 
-        
-        print(f"Relatório gerado com sucesso em: {caminho_saida}")
+                df_resumo_para_escrita.to_excel(writer, sheet_name=nome_planilha_resumo, index=False)
+                aplicar_estilos_planilha(writer, nome_planilha_resumo, df_resumo_para_escrita)
+            
+            # A aba de detalhes é sempre gerada
+            df_detalhes_original = dados_comparacao['dataframe_merged']
+            df_detalhes_para_escrita = df_detalhes_original.copy()
+            
+            # O código original para processar e salvar os detalhes vem aqui
+            for col_name in df_detalhes_para_escrita.columns:
+                if col_name.endswith("_DiffPerc_Linha(%)"):
+                    col_data = df_detalhes_para_escrita[col_name].copy()
+                    is_inf = (col_data == np.inf)
+                    is_neg_inf = (col_data == -np.inf)
+                    is_finite = np.isfinite(col_data)
+                    col_data[is_finite] = col_data[is_finite] / 100.0
+                    if is_inf.any() or is_neg_inf.any():
+                        col_data = col_data.astype(object)
+                        col_data[is_inf] = 'INF'
+                        col_data[is_neg_inf] = '-INF'
+                    df_detalhes_para_escrita[col_name] = col_data
+
+            # Define o nome da planilha de detalhes com base no modo
+            nome_planilha = "Resultado_Cruzamento" if not dados_comparacao.get('resumo_por_par') else nome_planilha_detalhes
+            df_detalhes_para_escrita.to_excel(writer, sheet_name=nome_planilha, index=False)
+            aplicar_estilos_planilha(writer, nome_planilha, df_detalhes_para_escrita)
+
+        # print(f"Relatório gerado com sucesso em: {caminho_saida}")
         return True
     except Exception as e:
-        print(f"Ocorreu um erro ao gerar o relatório Excel: {e}")
+        # print(f"Ocorreu um erro ao gerar o relatório Excel: {e}")
         import traceback; traceback.print_exc() 
         return False
 
